@@ -1,2 +1,2 @@
-./kernel_platform/out/
-./kernel_platform/out/*
+kernel_platform/out/
+kernel_platform/out/*
