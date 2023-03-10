@@ -30,11 +30,14 @@
 
 #include "libacpi.h"
 
-uint8_t acpi_csum(const void *base, int n) {
-	const uint8_t *p = base;
-	uint8_t sum = 0;
+uint8_t acpi_csum(void *base, int n) {
+	uint8_t *p;
+	uint8_t sum;
 	int bytesDone;
 
+	p = (uint8_t*)base;
+
+	sum = 0;
 	for (bytesDone = 0; bytesDone < n; bytesDone++) {
 		sum += *p;
 		p++;

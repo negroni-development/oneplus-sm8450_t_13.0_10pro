@@ -11,4 +11,5 @@ CONVERT_SRCS = \
 
 CONVERT_GEN_SRCS = convert-dtsv0-lexer.lex.c
 
-CONVERT_OBJS = $(CONVERT_SRCS:%.c=%.o) $(CONVERT_GEN_SRCS:%.c=%.o)
+CONVERT_OBJS = $(addprefix $(OUT_DIR)/, $(CONVERT_SRCS:%.c=%.o)) \
+	       $(addprefix $(OUT_DIR)/, $(CONVERT_GEN_SRCS:%.c=%.o))

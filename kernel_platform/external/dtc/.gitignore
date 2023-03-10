@@ -8,8 +8,6 @@
 *.tab.[ch]
 lex.yy.c
 *.lex.c
-.*.swp
-dtc-parser.h
 /dtc
 /fdtdump
 /convert-dtsv0
@@ -17,13 +15,6 @@ dtc-parser.h
 /fdtget
 /fdtput
 /fdtoverlay
+/fdtoverlaymerge
 /patches
 /.pc
-
-# cscope files
-cscope.*
-ncscope.*
-
-.eggs/
-build/
-dist/

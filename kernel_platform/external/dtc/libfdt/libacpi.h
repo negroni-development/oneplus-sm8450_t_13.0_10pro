@@ -69,6 +69,6 @@ typedef struct {
 #define ACPI_TABLE_MAGIC	0x41435049
 
 /* checksum byte by byte for acpi table */
-uint8_t acpi_csum(const void *base, int n);
+uint8_t acpi_csum(void *base, int n);
 
 #endif /* ifndef _LIBACPI_H */

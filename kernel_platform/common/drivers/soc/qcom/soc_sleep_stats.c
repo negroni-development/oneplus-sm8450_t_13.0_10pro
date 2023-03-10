@@ -43,7 +43,7 @@
 #define DDR_STATS_COUNT_ADDR		0x4
 #define DDR_STATS_DURATION_ADDR		0x8
 
-#if IS_ENABLED(CONFIG_DEBUG_FS) && IS_ENABLED(CONFIG_QCOM_SMEM)
+#if IS_ENABLED(CONFIG_QCOM_SMEM)
 struct subsystem_data {
 	const char *name;
 	u32 smem_item;
@@ -141,7 +141,7 @@ static void print_sleep_stats(struct seq_file *s, struct sleep_stats *stat)
 
 static int subsystem_sleep_stats_show(struct seq_file *s, void *d)
 {
-#if IS_ENABLED(CONFIG_DEBUG_FS) && IS_ENABLED(CONFIG_QCOM_SMEM)
+#if IS_ENABLED(CONFIG_QCOM_SMEM)
 	struct subsystem_data *subsystem = s->private;
 	struct sleep_stats *stat;
 

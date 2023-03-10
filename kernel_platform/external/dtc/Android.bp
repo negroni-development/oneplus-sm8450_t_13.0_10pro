@@ -25,22 +25,19 @@ package {
 license {
     name: "external_dtc_license",
     visibility: [":__subpackages__"],
-    license_kinds: ["SPDX-license-identifier-GPL-2.0"],
-    license_text: ["GPL"],
-}
-
-license {
-    name: "external_dtc_libfdt_license",
-    visibility: [":__subpackages__"],
-    license_kinds: ["SPDX-license-identifier-BSD-2-Clause"],
-    license_text: ["BSD-2-Clause"],
-}
-
-license {
-   name: "external_dtc_tests_license",
-    visibility: [":__subpackages__"],
-    license_kinds: ["SPDX-license-identifier-LGPL-2.1+"],
-    license_text: ["LGPL"],
+    license_kinds: [
+        "SPDX-license-identifier-BSD",
+        "SPDX-license-identifier-BSD-2-Clause",
+        "SPDX-license-identifier-GPL",
+        "SPDX-license-identifier-GPL-2.0",
+        "SPDX-license-identifier-ISC",
+        "SPDX-license-identifier-LGPL",
+        "SPDX-license-identifier-LGPL-2.1",
+    ],
+    license_text: [
+        "NOTICE",
+        "README.license",
+    ],
 }
 
 cc_defaults {

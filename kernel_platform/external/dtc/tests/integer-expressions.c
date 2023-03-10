@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 	void *fdt;
 	const fdt32_t *res;
 	int reslen;
-	unsigned int i;
+	int i;
 
 	test_init(argc, argv);
 

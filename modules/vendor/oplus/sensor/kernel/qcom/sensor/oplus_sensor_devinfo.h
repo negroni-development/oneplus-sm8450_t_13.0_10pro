@@ -17,7 +17,7 @@
 
 #include <linux/delay.h>
 #include <linux/slab.h>
-#include "oplus_project.h"
+#include <soc/oplus/system/oplus_project.h>
 #define SENSOR_DEVINFO_SYNC_TIME  10000 //10s
 
 //SMEM_SENSOR = SMEM_VERSION_FIRST + 23,

@@ -1,1 +1,1 @@
-#include <soc/oplus/boot/oplus_project.h>
+#include <soc/oplus/boot/include/oplus_project.h>

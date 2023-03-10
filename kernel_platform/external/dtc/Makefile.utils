@@ -8,24 +8,30 @@ FDTDUMP_SRCS = \
 	fdtdump.c \
 	util.c
 
-FDTDUMP_OBJS = $(FDTDUMP_SRCS:%.c=%.o)
+FDTDUMP_OBJS = $(addprefix $(OUT_DIR)/, $(FDTDUMP_SRCS:%.c=%.o))
 
 
 FDTGET_SRCS = \
 	fdtget.c \
 	util.c
 
-FDTGET_OBJS = $(FDTGET_SRCS:%.c=%.o)
+FDTGET_OBJS = $(addprefix $(OUT_DIR)/, $(FDTGET_SRCS:%.c=%.o))
 
 
 FDTPUT_SRCS = \
 	fdtput.c \
 	util.c
 
-FDTPUT_OBJS = $(FDTPUT_SRCS:%.c=%.o)
+FDTPUT_OBJS = $(addprefix $(OUT_DIR)/, $(FDTPUT_SRCS:%.c=%.o))
 
 FDTOVERLAY_SRCS = \
 	fdtoverlay.c \
 	util.c
 
-FDTOVERLAY_OBJS = $(FDTOVERLAY_SRCS:%.c=%.o)
+FDTOVERLAY_OBJS = $(addprefix $(OUT_DIR)/, $(FDTOVERLAY_SRCS:%.c=%.o))
+
+FDTOVERLAYMERGE_SRCS = \
+	fdtoverlaymerge.c \
+	util.c
+
+FDTOVERLAYMERGE_OBJS = $(addprefix $(OUT_DIR)/, $(FDTOVERLAYMERGE_SRCS:%.c=%.o))

@@ -179,7 +179,7 @@ export -f check_config_for_abi_dump
 GKI_BUILD_CONFIG=
 # Mixed build device kernels would not compile vmlinux. When using build_abi.sh to compile, we
 # do want to compile vmlinux since we are comparing the ABI of the device kernel.
-MAKE_GOALS+=" vmlinux"
+MAKE_GOALS+=" vmlinux ${KERNEL_BINARY}"
 
 function build_kernel() {
   # Delegate the actual build to build.sh.
@@ -343,7 +343,8 @@ if [ -n "$ABI_DEFINITION" ]; then
                                        --new      ${DIST_DIR}/${abi_out_file} \
                                        --report   ${abi_report}               \
                                        --short-report ${abi_report}.short     \
-                                       $FULL_REPORT_FLAG
+                                       $FULL_REPORT_FLAG                      \
+                                       $KMI_SYMBOL_LIST_FLAG
         rc=$?
         set -e
         echo "========================================================"

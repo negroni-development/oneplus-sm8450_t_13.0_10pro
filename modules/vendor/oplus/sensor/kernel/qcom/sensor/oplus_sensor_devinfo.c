@@ -140,7 +140,6 @@ static void parse_magnetic_sensor_dts(struct sensor_hw* hw, struct device_node *
 		int prj_dir[5];
 		struct device_node *node = ch_node;
 		struct device_node *ch_node_mag = NULL;
-		prj_id = get_project();
 		for_each_child_of_node(node, ch_node_mag) {
 			if (ch_node_mag == NULL) {
 				SENSOR_DEVINFO_DEBUG(" the mag_para use default parametyers");
@@ -1371,27 +1370,12 @@ static int sensor_ldo_init(struct device *dev)
 static int oplus_devinfo_probe(struct platform_device *pdev)
 {
 	struct sensor_info * chip = NULL;
-	size_t smem_size = 0;
 	void *smem_addr = NULL;
 	int rc = 0;
 	struct oplus_als_cali_data *data = NULL;
 
 	pr_info("%s call\n", __func__);
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
-		smem_size = ALIGN4(struct sensor_info);
-		rc = qcom_smem_alloc(QCOM_SMEM_HOST_ANY, SMEM_SENSOR, smem_size);
-		if (rc < 0 && rc != -EEXIST) {
-				pr_err("%s smem_alloc fail\n", __func__);
-				rc = -EFAULT;
-				return rc;
-		}
-
-		smem_size = 0;
-#endif
-	smem_addr = qcom_smem_get(QCOM_SMEM_HOST_ANY,
-			SMEM_SENSOR,
-			&smem_size);
 
 	if (IS_ERR(smem_addr)) {
 		pr_err("unable to acquire smem SMEM_SENSOR entry, smem_addr %p\n", smem_addr);

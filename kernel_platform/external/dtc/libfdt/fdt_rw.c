@@ -59,7 +59,7 @@ static int fdt_splice_(void *fdt, void *splicepoint, int oldlen, int newlen)
 
 	if ((oldlen < 0) || (soff + oldlen < soff) || (soff + oldlen > dsize))
 		return -FDT_ERR_BADOFFSET;
-	if ((p < (char *)fdt) || (dsize + newlen < (unsigned)oldlen))
+	if ((p < (char *)fdt) || (dsize + newlen < oldlen))
 		return -FDT_ERR_BADOFFSET;
 	if (dsize - oldlen + newlen > fdt_totalsize(fdt))
 		return -FDT_ERR_NOSPACE;
@@ -339,6 +339,7 @@ int fdt_add_subnode_namelen(void *fdt, int parentoffset,
 	int err;
 	uint32_t tag;
 	fdt32_t *endtag;
+	int depth = 0;
 
 	FDT_RW_PROBE(fdt);
 
@@ -348,15 +349,16 @@ int fdt_add_subnode_namelen(void *fdt, int parentoffset,
 	else if (offset != -FDT_ERR_NOTFOUND)
 		return offset;
 
-	/* Try to place the new node after the parent's properties */
-	tag = fdt_next_tag(fdt, parentoffset, &nextoffset);
-	/* the fdt_subnode_offset_namelen() should ensure this never hits */
-	if (!can_assume(LIBFDT_FLAWLESS) && (tag != FDT_BEGIN_NODE))
-		return -FDT_ERR_INTERNAL;
+	/* Try to place the new node at the end of the parent */
+	nextoffset = parentoffset;
 	do {
 		offset = nextoffset;
 		tag = fdt_next_tag(fdt, offset, &nextoffset);
-	} while ((tag == FDT_PROP) || (tag == FDT_NOP));
+		if (tag == FDT_BEGIN_NODE)
+			depth++;
+		else if (tag == FDT_END_NODE)
+			depth--;
+	} while (depth > 0);
 
 	nh = fdt_offset_ptr_w_(fdt, offset);
 	nodelen = sizeof(*nh) + FDT_TAGALIGN(namelen+1) + FDT_TAGSIZE;
@@ -394,9 +396,7 @@ int fdt_del_node(void *fdt, int nodeoffset)
 }
 
 static void fdt_packblocks_(const char *old, char *new,
-			    int mem_rsv_size,
-			    int struct_size,
-			    int strings_size)
+			    int mem_rsv_size, int struct_size)
 {
 	int mem_rsv_off, struct_off, strings_off;
 
@@ -411,7 +411,8 @@ static void fdt_packblocks_(const char *old, char *new,
 	fdt_set_off_dt_struct(new, struct_off);
 	fdt_set_size_dt_struct(new, struct_size);
 
-	memmove(new + strings_off, old + fdt_off_dt_strings(old), strings_size);
+	memmove(new + strings_off, old + fdt_off_dt_strings(old),
+		fdt_size_dt_strings(old));
 	fdt_set_off_dt_strings(new, strings_off);
 	fdt_set_size_dt_strings(new, fdt_size_dt_strings(old));
 }
@@ -432,14 +433,12 @@ int fdt_open_into(const void *fdt, void *buf, int bufsize)
 
 	if (can_assume(LATEST) || fdt_version(fdt) >= 17) {
 		struct_size = fdt_size_dt_struct(fdt);
-	} else if (fdt_version(fdt) == 16) {
+	} else {
 		struct_size = 0;
 		while (fdt_next_tag(fdt, struct_size, &struct_size) != FDT_END)
 			;
 		if (struct_size < 0)
 			return struct_size;
-	} else {
-		return -FDT_ERR_BADVERSION;
 	}
 
 	if (can_assume(LIBFDT_ORDER) ||
@@ -471,8 +470,7 @@ int fdt_open_into(const void *fdt, void *buf, int bufsize)
 			return -FDT_ERR_NOSPACE;
 	}
 
-	fdt_packblocks_(fdt, tmp, mem_rsv_size, struct_size,
-			fdt_size_dt_strings(fdt));
+	fdt_packblocks_(fdt, tmp, mem_rsv_size, struct_size);
 	memmove(buf, tmp, newsize);
 
 	fdt_set_magic(buf, FDT_MAGIC);
@@ -492,8 +490,7 @@ int fdt_pack(void *fdt)
 
 	mem_rsv_size = (fdt_num_mem_rsv(fdt)+1)
 		* sizeof(struct fdt_reserve_entry);
-	fdt_packblocks_(fdt, fdt, mem_rsv_size, fdt_size_dt_struct(fdt),
-			fdt_size_dt_strings(fdt));
+	fdt_packblocks_(fdt, fdt, mem_rsv_size, fdt_size_dt_struct(fdt));
 	fdt_set_totalsize(fdt, fdt_data_size_(fdt));
 
 	return 0;

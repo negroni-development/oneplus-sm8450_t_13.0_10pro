@@ -1,0 +1,2 @@
+mm/oplus_mm/memload_opt/mapped_protect/oplus_bsp_mapped_protect.ko
+drivers/soc/qcom/sync_fence/qcom_sync_file.ko

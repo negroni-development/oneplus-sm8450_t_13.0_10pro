@@ -35,11 +35,7 @@ static int fdt_getprop_u32_by_poffset(void *fdt, const char *path,
 		return node_off;
 
 	val = fdt_getprop(fdt, node_off, name, &len);
-	if (val && len < 0)
-		FAIL("fdt_getprop() returns negative length");
-	if (!val && len < 0)
-		return len;
-	if (!val || ((unsigned)len < (sizeof(uint32_t) * (poffset + 1))))
+	if (!val || (len < (sizeof(uint32_t) * (poffset + 1))))
 		return -FDT_ERR_NOTFOUND;
 
 	*out = fdt32_to_cpu(*(val + poffset));

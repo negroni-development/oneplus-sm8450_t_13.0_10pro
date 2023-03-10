@@ -55,12 +55,6 @@
 #   EXT_MODULES
 #     Space separated list of external kernel modules to be build.
 #
-#   EXT_MODULES_MAKEFILE
-#     Location of a makefile to build external modules. If set, it will get
-#     called with all the necessary parameters to build and install external
-#     modules.  This allows for building them in parallel using makefile
-#     parallelization.
-#
 #   UNSTRIPPED_MODULES
 #     Space separated list of modules to be copied to <DIST_DIR>/unstripped
 #     for debugging purposes.
@@ -295,6 +289,13 @@
 #     VENDOR_DLKM_MODULES_LIST is), a default set of properties will be used
 #     which assumes an ext4 filesystem and a dynamic partition.
 #
+#   SUPER_IMAGE_CONTENTS
+#     A list of images to be added to a kernel/build generated super.img
+#     Partition names are derived from "basename -s .img $image"
+#
+#   SUPER_IMAGE_SIZE
+#     Size, in bytes, of the generated super.img
+#
 #   LZ4_RAMDISK
 #     if set to "1", any ramdisks generated will be lz4 compressed instead of
 #     gzip compressed.
@@ -418,6 +419,7 @@ function create_modules_staging() {
   local dest_stage=$3
   local modules_blocklist_file=$4
   local depmod_flags=$5
+  local list_order=$6
 
   rm -rf ${dest_dir}
   mkdir -p ${dest_dir}/kernel
@@ -427,7 +429,7 @@ function create_modules_staging() {
   cp ${src_dir}/modules.order ${dest_dir}/modules.order
   cp ${src_dir}/modules.builtin ${dest_dir}/modules.builtin
 
-  if [[ -n "${EXT_MODULES}" ]] || [[ -n "${EXT_MODULES_MAKEFILE}" ]]; then
+  if [ -n "${EXT_MODULES}" ]; then
     mkdir -p ${dest_dir}/extra/
     cp -r ${src_dir}/extra/* ${dest_dir}/extra/
     (cd ${dest_dir}/ && \
@@ -463,7 +465,12 @@ function create_modules_staging() {
 
     # grep the modules.order for any KOs in the modules list
     cp ${dest_dir}/modules.order ${old_modules_list}
-    ! grep -w -f ${modules_list_filter} ${old_modules_list} > ${dest_dir}/modules.order
+    if [ "${list_order}" = "1" ]; then
+        sed -i 's/.*\///g' ${old_modules_list}
+        ! grep -w -f ${old_modules_list} ${modules_list_filter} > ${dest_dir}/modules.order
+    else
+        ! grep -w -f ${modules_list_filter} ${old_modules_list} > ${dest_dir}/modules.order
+    fi
     rm -f ${modules_list_filter} ${old_modules_list}
     cat ${dest_dir}/modules.order | sed -e "s/^/  /"
   fi
@@ -525,6 +532,11 @@ function build_vendor_dlkm() {
   fi
 
   cp ${vendor_dlkm_modules_load} ${DIST_DIR}/vendor_dlkm.modules.load
+  if [ -e ${vendor_dlkm_modules_root_dir}/modules.blocklist ]; then
+    cp ${vendor_dlkm_modules_root_dir}/modules.blocklist \
+      ${DIST_DIR}/vendor_dlkm.modules.blocklist
+  fi
+
   local vendor_dlkm_props_file
 
   if [ -z "${VENDOR_DLKM_PROPS}" ]; then
@@ -547,6 +559,38 @@ function build_vendor_dlkm() {
   fi
   build_image "${VENDOR_DLKM_STAGING_DIR}" "${vendor_dlkm_props_file}" \
     "${DIST_DIR}/vendor_dlkm.img" /dev/null
+}
+
+function build_super() {
+  echo "========================================================"
+  echo " Creating super.img"
+
+  local super_props_file=$(mktemp)
+  local dynamic_partitions=""
+  # Default to 256 MB
+  local super_image_size="$((${SUPER_IMAGE_SIZE:-268435456}))"
+  local group_size="$((${super_image_size} - 0x400000))"
+  echo -e "lpmake=lpmake" >> ${super_props_file}
+  echo -e "super_metadata_device=super" >> ${super_props_file}
+  echo -e "super_block_devices=super" >> ${super_props_file}
+  echo -e "super_super_device_size=${super_image_size}" >> ${super_props_file}
+  echo -e "super_partition_size=${super_image_size}" >> ${super_props_file}
+  echo -e "super_partition_groups=kb_dynamic_partitions" >> ${super_props_file}
+  echo -e "super_kb_dynamic_partitions_group_size=${group_size}" >> ${super_props_file}
+
+  for image in "${SUPER_IMAGE_CONTENTS}"; do
+    echo "  Adding ${image}"
+    partition_name=$(basename -s .img "${image}")
+    dynamic_partitions="${dynamic_partitions} ${partition_name}"
+    echo -e "${partition_name}_image=${image}" >> ${super_props_file}
+  done
+
+  echo -e "dynamic_partition_list=${dynamic_partitions}" >> ${super_props_file}
+  echo -e "super_kb_dynamic_partitions_partition_list=${dynamic_partitions}" >> ${super_props_file}
+  build_super_image -v ${super_props_file} ${DIST_DIR}/super.img
+  rm ${super_props_file}
+
+  echo "super image created at ${DIST_DIR}/super.img"
 }
 
 export ROOT_DIR=$(readlink -f $(dirname $0)/..)
@@ -717,6 +761,7 @@ if [ -n "${SKIP_IF_VERSION_MATCHES}" ]; then
   fi
 fi
 
+rm -rf ${DIST_DIR}
 mkdir -p ${OUT_DIR} ${DIST_DIR}
 
 if [ -n "${GKI_PREBUILTS_DIR}" ]; then
@@ -936,15 +981,6 @@ if [ "${BUILD_INITRAMFS}" = "1" -o  -n "${IN_KERNEL_MODULES}" ]; then
         INSTALL_MOD_PATH=${MODULES_STAGING_DIR} "${MAKE_ARGS[@]}" modules_install)
 fi
 
-if [[ -z "${SKIP_EXT_MODULES}" ]] && [[ -n "${EXT_MODULES_MAKEFILE}" ]]; then
-  echo "========================================================"
-  echo " Building and installing external modules using ${EXT_MODULES_MAKEFILE}"
-
-  make -f "${EXT_MODULES_MAKEFILE}" KERNEL_SRC=${ROOT_DIR}/${KERNEL_DIR} \
-          O=${OUT_DIR} ${TOOL_ARGS} ${MODULE_STRIP_FLAG}                 \
-          INSTALL_MOD_PATH=${MODULES_STAGING_DIR} "${MAKE_ARGS[@]}"
-fi
-
 if [[ -z "${SKIP_EXT_MODULES}" ]] && [[ -n "${EXT_MODULES}" ]]; then
   echo "========================================================"
   echo " Building external modules and installing them into staging directory"
@@ -1075,7 +1111,7 @@ fi
 
 MODULES=$(find ${MODULES_STAGING_DIR} -type f -name "*.ko")
 if [ -n "${MODULES}" ]; then
-  if [ -n "${IN_KERNEL_MODULES}" -o -n "${EXT_MODULES}" -o -n "${EXT_MODULES_MAKEFILE}" ]; then
+  if [ -n "${IN_KERNEL_MODULES}" -o -n "${EXT_MODULES}" ]; then
     echo "========================================================"
     echo " Copying modules files"
     for FILE in ${MODULES}; do
@@ -1088,12 +1124,15 @@ if [ -n "${MODULES}" ]; then
     echo " Creating initramfs"
     rm -rf ${INITRAMFS_STAGING_DIR}
     create_modules_staging "${MODULES_LIST}" ${MODULES_STAGING_DIR} \
-      ${INITRAMFS_STAGING_DIR} "${MODULES_BLOCKLIST}" "-e"
+      ${INITRAMFS_STAGING_DIR} "${MODULES_BLOCKLIST}" "-e" "${MODULES_LIST_ORDER}"
 
     MODULES_ROOT_DIR=$(echo ${INITRAMFS_STAGING_DIR}/lib/modules/*)
     cp ${MODULES_ROOT_DIR}/modules.load ${DIST_DIR}/modules.load
     cp ${MODULES_ROOT_DIR}/modules.load ${DIST_DIR}/vendor_boot.modules.load
     echo "${MODULES_OPTIONS}" > ${MODULES_ROOT_DIR}/modules.options
+    if [ -e "${MODULES_ROOT_DIR}/modules.blocklist" ]; then
+      cp ${MODULES_ROOT_DIR}/modules.blocklist ${DIST_DIR}/modules.blocklist
+    fi
 
     mkbootfs "${INITRAMFS_STAGING_DIR}" >"${MODULES_STAGING_DIR}/initramfs.cpio"
     ${RAMDISK_COMPRESS} "${MODULES_STAGING_DIR}/initramfs.cpio" >"${DIST_DIR}/initramfs.img"
@@ -1102,6 +1141,10 @@ fi
 
 if [ -n "${VENDOR_DLKM_MODULES_LIST}" ]; then
   build_vendor_dlkm
+fi
+
+if [ -n "${SUPER_IMAGE_CONTENTS}" ]; then
+  build_super
 fi
 
 if [ -n "${UNSTRIPPED_MODULES}" ]; then
